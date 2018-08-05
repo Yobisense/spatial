@@ -25,7 +25,10 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import org.geotools.geometry.DirectPosition2D;
+import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.jaitools.jts.CoordinateSequence2D;
 import org.neo4j.gis.spatial.*;
 import org.neo4j.gis.spatial.encoders.SimpleGraphEncoder;
 import org.neo4j.gis.spatial.encoders.SimplePointEncoder;
@@ -539,6 +542,20 @@ public class SpatialProcedures {
                     double distance = r.hasProperty(DISTANCE) ? ((Number) r.getProperty(DISTANCE)).doubleValue() : -1;
                     return new NodeDistanceResult(r.getGeomNode(), distance);
                 });
+    }
+
+    @Procedure(value="spatial.contains", mode=WRITE)
+    @Description("Returns all geometry nodes containing the given coordinate")
+    public Stream<NodeResult> findGeometriesContaining(
+            @Name("layerName") String name,
+            @Name("coordinate") Object coordinate) {
+
+        Layer layer = getLayerOrThrow(name);
+        GeometryFactory factory = layer.getGeometryFactory();
+        Point point = factory.createPoint(toCoordinate(coordinate));
+        return GeoPipeline
+                .startContainSearch(layer, point)
+                .stream().map(r -> new NodeResult(r.getGeomNode()));
     }
 
     @Procedure("spatial.decodeGeometry")
